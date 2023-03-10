@@ -29,12 +29,12 @@ import openai_utils
 db = database.Database()
 logger = logging.getLogger(__name__)
 
-HELP_MESSAGE = """Commands:
-⚪ /retry – Regenerate last bot answer
-⚪ /new – Start new dialog
-⚪ /mode – Select chat mode
-⚪ /balance – Show balance
-⚪ /help – Show help
+HELP_MESSAGE = """Команды:
+⚪ /retry – Повторить последний ответ бота
+⚪ /new – Начать новый диалог
+⚪ /mode – Выбор вида собеседника
+⚪ /balance – Показать баланс
+⚪ /help – Помощь
 """
 
 
@@ -65,10 +65,10 @@ async def start_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
     db.start_new_dialog(user_id)
     
-    reply_text = "Hi! I'm <b>ChatGPT</b> bot implemented with GPT-3.5 OpenAI API 🤖\n\n"
+    reply_text = "Привет! Я <b>ChatGPT</b> бот\n\n"
     reply_text += HELP_MESSAGE
 
-    reply_text += "\nAnd now... ask me anything!"
+    reply_text += "\nСпрашивай меня о чём угодно!"
     
     await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
 
@@ -110,7 +110,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     if use_new_dialog_timeout:
         if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
             db.start_new_dialog(user_id)
-            await update.message.reply_text(f"Starting new dialog due to timeout (<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
+            await update.message.reply_text(f"Начинаю новый диалог из-за таймаута (<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
     # send typing action
@@ -140,7 +140,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
 
     except Exception as e:
-        error_text = f"Something went wrong during completion. Reason: {e}"
+        error_text = f"Произошла ошибка. Причина: {e}"
         logger.error(error_text)
         await update.message.reply_text(error_text)
         return
@@ -148,9 +148,9 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     # send message if some messages were removed from the context
     if n_first_dialog_messages_removed > 0:
         if n_first_dialog_messages_removed == 1:
-            text = "✍️ <i>Note:</i> Your current dialog is too long, so your <b>first message</b> was removed from the context.\n Send /new command to start new dialog"
+            text = "✍️ <i>Пометка:</i> Твой текущий диалог с ботм слишком длинный, твоё <b>первое сообщение</b> удалено.\n Отправь команду /new чтобы начать новый диалог"
         else:
-            text = f"✍️ <i>Note:</i> Your current dialog is too long, so <b>{n_first_dialog_messages_removed} first messages</b> were removed from the context.\n Send /new command to start new dialog"
+            text = f"✍️ <i>Пометка:</i> Твой текущий диалог с ботм слишком длинный, <b>{n_first_dialog_messages_removed} первое сообщение</b> было удалено из чата.\n Отправь команду /new чтобы начать новый диалог"
         await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
     # split answer into multiple messages due to 4096 character limit
@@ -209,7 +209,7 @@ async def new_dialog_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
     db.start_new_dialog(user_id)
-    await update.message.reply_text("Starting new dialog ✅")
+    await update.message.reply_text("Начинаю новый диалог ✅")
 
     chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
     await update.message.reply_text(f"{openai_utils.CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
@@ -225,7 +225,7 @@ async def show_chat_modes_handle(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton(chat_mode_dict["name"], callback_data=f"set_chat_mode|{chat_mode}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text("Select chat mode:", reply_markup=reply_markup)
+    await update.message.reply_text("Выберите собеседника:", reply_markup=reply_markup)
 
 
 async def set_chat_mode_handle(update: Update, context: CallbackContext):
@@ -241,7 +241,7 @@ async def set_chat_mode_handle(update: Update, context: CallbackContext):
     db.start_new_dialog(user_id)
 
     await query.edit_message_text(
-        f"<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> chat mode is set",
+        f"<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> собеседник выбран",
         parse_mode=ParseMode.HTML
     )
 
@@ -259,18 +259,18 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
     n_spent_dollars = n_used_tokens * (price_per_1000_tokens / 1000)
 
-    text = f"You spent <b>{n_spent_dollars:.03f}$</b>\n"
-    text += f"You used <b>{n_used_tokens}</b> tokens\n\n"
+    text = f"Ты потратил <b>{n_spent_dollars:.03f}$</b>\n"
+    text += f"Ты использовал <b>{n_used_tokens}</b> токенов\n\n"
 
-    text += "🏷️ Prices\n"
-    text += f"<i>- ChatGPT: {price_per_1000_tokens}$ per 1000 tokens\n"
-    text += f"- Whisper (voice recognition): {config.whisper_price_per_1_min}$ per 1 minute</i>"
+    text += "🏷️ Цены\n"
+    text += f"<i>- ChatGPT: {price_per_1000_tokens}$ за 1000 токенов\n"
+    text += f"- Whisper (распознавание голоса): {config.whisper_price_per_1_min}$ за 1 минуту</i>"
 
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 async def edited_message_handle(update: Update, context: CallbackContext):
-    text = "🥲 Unfortunately, message <b>editing</b> is not supported"
+    text = "🥲 К сожалению, изменение <b>сообщений</b> не поддерживается"
     await update.edited_message.reply_text(text, parse_mode=ParseMode.HTML)
 
 

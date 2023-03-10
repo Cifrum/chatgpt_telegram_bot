@@ -21,7 +21,7 @@ class ChatGPT:
     
     async def send_message(self, message, dialog_messages=[], chat_mode="assistant"):
         if chat_mode not in CHAT_MODES.keys():
-            raise ValueError(f"Chat mode {chat_mode} is not supported")
+            raise ValueError(f"Собеседник {chat_mode} не поддерживается")
 
         n_dialog_messages_before = len(dialog_messages)
         answer = None
@@ -49,7 +49,7 @@ class ChatGPT:
                 
             except openai.error.InvalidRequestError as e:  # too many tokens
                 if len(dialog_messages) == 0:
-                    raise ValueError("Dialog messages is reduced to zero, but still has too many tokens to make completion") from e
+                    raise ValueError("Диалоговые сообщения сведены к нулю, но по-прежнему содержат слишком много токенов для завершения.") from e
 
                 # forget first message in dialog_messages
                 dialog_messages = dialog_messages[1:]
