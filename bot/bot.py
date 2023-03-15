@@ -115,7 +115,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         db.set_user_attribute(user_id, "last_update_tokens", datetime.now())
         db.set_user_attribute(user_id, "n_used_tokens", 0)
     avaible_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-    if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) > 0):
+    if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
         # new dialog timeout
         if use_new_dialog_timeout:
             if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
@@ -195,7 +195,7 @@ async def voice_message_handle(update: Update, context: CallbackContext):
         db.set_user_attribute(user_id, "last_update_tokens", datetime.now())
         db.set_user_attribute(user_id, "n_used_tokens", 0)
     avaible_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-    if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) > 0):
+    if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
         voice = update.message.voice
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_dir = Path(tmp_dir)
@@ -286,7 +286,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
     n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
     is_subscribe = db.get_user_attribute(user_id, "is_subscribe")
     subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
-    if (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) > 0):
+    if (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
         subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
         text = f"Поздравляю, у тебя активирована подписка!\nОна действует до {subscribe_date}"
     else:
@@ -340,7 +340,7 @@ async def buy_tokens(update: Update, context: CallbackContext):
     n_used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
     is_subscribe = db.get_user_attribute(user_id, "is_subscribe")
     subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
-    if (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) > 0):
+    if (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
         subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
         text = f"Поздравляю, у тебя активирована подписка!\nОна действует до {subscribe_date}"
         await query.edit_message_text(text, parse_mode=ParseMode.HTML)
@@ -376,7 +376,8 @@ async def buy_tokens(update: Update, context: CallbackContext):
 
                         await query.edit_message_text('Поздравляю с приобретённой подпиской!', parse_mode=ParseMode.HTML)
                         db.set_user_attribute(user_id, "is_subscribe", True)
-                        db.set_user_attribute(user_id, "subscribe_date", datetime.now())
+                        from datetime import timedelta
+                        db.set_user_attribute(user_id, "subscribe_date", datetime.now() + timedelta(weeks=4))
 
                         
                         
