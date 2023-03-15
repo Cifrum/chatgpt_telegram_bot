@@ -366,6 +366,7 @@ async def buy_tokens(update: Update, context: CallbackContext):
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         status = None
+        c = 0
         while c < 720 and status != 'success':
             try:
                 history = client.operation_history(label=label)
