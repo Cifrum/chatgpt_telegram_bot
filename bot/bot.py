@@ -10,7 +10,7 @@ from datetime import datetime
 from yoomoney import Quickpay
 import asyncio
 import telegram
-from telegram import Update, User, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, User, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CallbackContext,
@@ -30,12 +30,12 @@ import openai_utils
 db = database.Database()
 logger = logging.getLogger(__name__)
 
-HELP_MESSAGE = """Команды:
+HELP_MESSAGE = """Команды и кнопки:
 ⚪ /retry – Повторить последний ответ бота
-⚪ /new – Начать новый диалог
-⚪ /mode – Выбор вида собеседника
-⚪ /balance – Показать баланс
-⚪ /help – Помощь
+⌨️ Начать новый диалог – Нажмите кнопку для начала нового диалога с ботом
+⌨️ Режим бота – Выбор вида собеседника
+⌨️ Баланс – Показать баланс, приобрести подписку
+⌨️ Помощь – Помощь и описание кнопок
 """
 
 
@@ -69,9 +69,16 @@ async def start_handle(update: Update, context: CallbackContext):
     reply_text = "Привет! Я <b>ChatGPT</b> бот\n\n"
     reply_text += HELP_MESSAGE
 
+    keyboard = []
+    keyboard.append([KeyboardButton('Начать новый диалог')])
+    keyboard.append([KeyboardButton('Режим бота')])
+    keyboard.append([KeyboardButton('Баланс')])
+    keyboard.append([KeyboardButton('Помощь')])
+    reply_markup = ReplyKeyboardMarkup(keyboard)
+    
     reply_text += "\nСпрашивай меня о чём угодно!"
     
-    await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
+    await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
 
 
 async def help_handle(update: Update, context: CallbackContext):
@@ -88,7 +95,7 @@ async def retry_handle(update: Update, context: CallbackContext):
 
     dialog_messages = db.get_dialog_messages(user_id, dialog_id=None)
     if len(dialog_messages) == 0:
-        await update.message.reply_text("No message to retry 🤷‍♂️")
+        await update.message.reply_text("Нет сообщений для повторного запроса 🤷‍♂️")
         return
 
     last_dialog_message = dialog_messages.pop()
@@ -416,7 +423,7 @@ async def check_subscribe(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton('Подписаться❤', url='https://t.me/+jrgWB4pkbhFkY2Ni')])
         keyboard.append([InlineKeyboardButton('Проверить', callback_data='check')])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text('Вы не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
+        await query.edit_message_text('Вы всё ещё не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
 
 
 def run_bot() -> None:
@@ -434,20 +441,20 @@ def run_bot() -> None:
         user_filter = filters.User(username=config.allowed_telegram_usernames)
 
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
-    application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
+    application.add_handler(MessageHandler("Помощь", help_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
     application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
-    application.add_handler(CommandHandler("new", new_dialog_handle, filters=user_filter))
+    application.add_handler(MessageHandler("Начать новый диалог", new_dialog_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.VOICE & user_filter, voice_message_handle))
     
-    application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
+    application.add_handler(MessageHandler("Режим бота", show_chat_modes_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
     application.add_handler(CallbackQueryHandler(check_subscribe, pattern="^check"))
     application.add_handler(CallbackQueryHandler(buy_tokens, pattern="^buy_subscribe"))
 
-    application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
+    application.add_handler(MessageHandler("Баланс", show_balance_handle, filters=user_filter))
     
     application.add_error_handler(error_handle)
     
