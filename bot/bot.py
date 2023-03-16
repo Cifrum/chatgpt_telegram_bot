@@ -184,59 +184,68 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
 
     else:
         keyboard = []
-        keyboard.append([InlineKeyboardButton('Подписаться❤', url='https://t.me/AllNewsAI')])
+        keyboard.append([InlineKeyboardButton('Подписаться❤', url='https://t.me/+jrgWB4pkbhFkY2Ni')])
+        keyboard.append([InlineKeyboardButton('Проверить', callback_data='check')])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(user_id, 'Вы не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
 
 async def voice_message_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
-    db.set_user_attribute(user_id, "last_interaction", datetime.now())
-    is_subscribe = db.get_user_attribute(user_id, "is_subscribe")
+    user_channel_status = await context.bot.get_chat_member(chat_id='-1001311628211', user_id=user_id)
+    if user_channel_status["status"] != 'left':
+        db.set_user_attribute(user_id, "last_interaction", datetime.now())
+        is_subscribe = db.get_user_attribute(user_id, "is_subscribe")
 
-    chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
-    subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
-    last_update_tokens = db.get_user_attribute(user_id, "last_update_tokens")
-    delta = datetime.now() - last_update_tokens
-    if delta.days >= 1:
-        db.set_user_attribute(user_id, "last_update_tokens", datetime.now())
-        db.set_user_attribute(user_id, "n_used_tokens", 0)
-    avaible_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-    if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
-        voice = update.message.voice
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_dir = Path(tmp_dir)
-            voice_ogg_path = tmp_dir / "voice.ogg"
+        chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
+        subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
+        last_update_tokens = db.get_user_attribute(user_id, "last_update_tokens")
+        delta = datetime.now() - last_update_tokens
+        if delta.days >= 1:
+            db.set_user_attribute(user_id, "last_update_tokens", datetime.now())
+            db.set_user_attribute(user_id, "n_used_tokens", 0)
+        avaible_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+        if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
+            voice = update.message.voice
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                tmp_dir = Path(tmp_dir)
+                voice_ogg_path = tmp_dir / "voice.ogg"
 
-            # download
-            voice_file = await context.bot.get_file(voice.file_id)
-            await voice_file.download_to_drive(voice_ogg_path)
+                # download
+                voice_file = await context.bot.get_file(voice.file_id)
+                await voice_file.download_to_drive(voice_ogg_path)
 
-            # convert to mp3
-            voice_mp3_path = tmp_dir / "voice.mp3"
-            pydub.AudioSegment.from_file(voice_ogg_path).export(voice_mp3_path, format="mp3")
+                # convert to mp3
+                voice_mp3_path = tmp_dir / "voice.mp3"
+                pydub.AudioSegment.from_file(voice_ogg_path).export(voice_mp3_path, format="mp3")
 
-            # transcribe
-            with open(voice_mp3_path, "rb") as f:
-                transcribed_text = await openai_utils.transcribe_audio(f)
+                # transcribe
+                with open(voice_mp3_path, "rb") as f:
+                    transcribed_text = await openai_utils.transcribe_audio(f)
 
-        text = f"🎤: <i>{transcribed_text}</i>"
-        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+            text = f"🎤: <i>{transcribed_text}</i>"
+            await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
-        await message_handle(update, context, message=transcribed_text)
+            await message_handle(update, context, message=transcribed_text)
 
-        # calculate spent dollars
-        n_spent_dollars = voice.duration * (config.whisper_price_per_1_min / 60)
+            # calculate spent dollars
+            n_spent_dollars = voice.duration * (config.whisper_price_per_1_min / 60)
 
-        # normalize dollars to tokens (it's very convenient to measure everything in a single unit)
-        price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
-        n_used_tokens = int(n_spent_dollars / (price_per_1000_tokens / 1000))
-        db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+            # normalize dollars to tokens (it's very convenient to measure everything in a single unit)
+            price_per_1000_tokens = config.chatgpt_price_per_1000_tokens if config.use_chatgpt_api else config.gpt_price_per_1000_tokens
+            n_used_tokens = int(n_spent_dollars / (price_per_1000_tokens / 1000))
+            db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+        else:
+            keyboard = []
+            keyboard.append([InlineKeyboardButton('Купить подписку❤', callback_data=f"buy_subscribe")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text('🔴У тебя не осталось токенов :(\n Ты можешь купить подписку за 249 рублей, либо дождаться следующего дня.', reply_markup=reply_markup)
     else:
         keyboard = []
-        keyboard.append([InlineKeyboardButton('Купить подписку❤', callback_data=f"buy_subscribe")])
+        keyboard.append([InlineKeyboardButton('Подписаться❤', url='https://t.me/+jrgWB4pkbhFkY2Ni')])
+        keyboard.append([InlineKeyboardButton('Проверить', callback_data='check')])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text('🔴У тебя не осталось токенов :(\n Ты можешь купить подписку за 249 рублей, либо дождаться следующего дня.', reply_markup=reply_markup)
+        await context.bot.send_message(user_id, 'Вы не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
 
 
 async def new_dialog_handle(update: Update, context: CallbackContext):
@@ -392,7 +401,22 @@ async def buy_tokens(update: Update, context: CallbackContext):
                 print(e)
             await asyncio.sleep(5)
             c+=1
+        if status != 'success':
+            await query.edit_message_text('Оплата не поступила, попробуйте позже.', parse_mode=ParseMode.HTML)
 
+
+async def check_subscribe(update: Update, context: CallbackContext):
+    user_id = update.callback_query.from_user.id
+    user_channel_status = await context.bot.get_chat_member(chat_id='-1001311628211', user_id=user_id)
+    query = update.callback_query
+    if user_channel_status["status"] != 'left':
+        await query.edit_message_text('Приветствуем тебя в нашем канале! Скорее начинай общение с искусственным интеллектом!', parse_mode=ParseMode.HTML)
+    else:
+        keyboard = []
+        keyboard.append([InlineKeyboardButton('Подписаться❤', url='https://t.me/+jrgWB4pkbhFkY2Ni')])
+        keyboard.append([InlineKeyboardButton('Проверить', callback_data='check')])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text('Вы не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
 
 
 def run_bot() -> None:
@@ -420,6 +444,7 @@ def run_bot() -> None:
     
     application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
+    application.add_handler(CallbackQueryHandler(check_subscribe, pattern="^check"))
     application.add_handler(CallbackQueryHandler(buy_tokens, pattern="^buy_subscribe"))
 
     application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
