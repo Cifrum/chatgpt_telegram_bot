@@ -104,7 +104,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
         return
     user_id = update.message.from_user.id
     await register_user_if_not_exists(update, context, update.message.from_user)
-    user_channel_status = await context.bot.get_chat_member(chat_id='@AllNewsAI', user_id=user_id)
+    user_channel_status = await context.bot.get_chat_member(chat_id='-1001311628211', user_id=user_id)
     if user_channel_status["status"] != 'left':
         is_subscribe = db.get_user_attribute(user_id, "is_subscribe")
 
