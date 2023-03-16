@@ -102,84 +102,91 @@ async def message_handle(update: Update, context: CallbackContext, message=None,
     if update.edited_message is not None:
         await edited_message_handle(update, context)
         return
-        
-    await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
-    is_subscribe = db.get_user_attribute(user_id, "is_subscribe")
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_channel_status = await context.bot.get_chat_member(chat_id='@AllNewsAI', user_id=user_id)
+    if user_channel_status["status"] != 'left':
+        is_subscribe = db.get_user_attribute(user_id, "is_subscribe")
 
-    chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
-    subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
-    last_update_tokens = db.get_user_attribute(user_id, "last_update_tokens")
-    delta = datetime.now() - last_update_tokens
-    if delta.days >= 1:
-        db.set_user_attribute(user_id, "last_update_tokens", datetime.now())
-        db.set_user_attribute(user_id, "n_used_tokens", 0)
-    avaible_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-    if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
-        # new dialog timeout
-        if use_new_dialog_timeout:
-            if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
-                db.start_new_dialog(user_id)
-                await update.message.reply_text(f"Начинаю новый диалог из-за таймаута (<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
-        db.set_user_attribute(user_id, "last_interaction", datetime.now())
+        chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
+        subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
+        last_update_tokens = db.get_user_attribute(user_id, "last_update_tokens")
+        delta = datetime.now() - last_update_tokens
+        if delta.days >= 1:
+            db.set_user_attribute(user_id, "last_update_tokens", datetime.now())
+            db.set_user_attribute(user_id, "n_used_tokens", 0)
+        avaible_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+        if avaible_tokens < 5000 or (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
+            # new dialog timeout
+            if use_new_dialog_timeout:
+                if (datetime.now() - db.get_user_attribute(user_id, "last_interaction")).seconds > config.new_dialog_timeout and len(db.get_dialog_messages(user_id)) > 0:
+                    db.start_new_dialog(user_id)
+                    await update.message.reply_text(f"Начинаю новый диалог из-за таймаута (<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> mode) ✅", parse_mode=ParseMode.HTML)
+            db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
-        # send typing action
-        await update.message.chat.send_action(action="typing")
+            # send typing action
+            await update.message.chat.send_action(action="typing")
 
-        try:
-            message = message or update.message.text
-
-            dialog_messages = db.get_dialog_messages(user_id, dialog_id=None)
-            chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
-
-            chatgpt_instance = openai_utils.ChatGPT(use_chatgpt_api=config.use_chatgpt_api)
-            answer, n_used_tokens, n_first_dialog_messages_removed = await chatgpt_instance.send_message(
-                message,
-                dialog_messages=dialog_messages,
-                chat_mode=chat_mode
-            )
-
-            # update user data
-            new_dialog_message = {"user": message, "bot": answer, "date": datetime.now()}
-            db.set_dialog_messages(
-                user_id,
-                db.get_dialog_messages(user_id, dialog_id=None) + [new_dialog_message],
-                dialog_id=None
-            )
-
-            db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
-
-        except Exception as e:
-            error_text = f"Произошла ошибка. Причина: {e}"
-            logger.error(error_text)
-            await update.message.reply_text(error_text)
-            return
-
-        # send message if some messages were removed from the context
-        if n_first_dialog_messages_removed > 0:
-            if n_first_dialog_messages_removed == 1:
-                text = "✍️ <i>Пометка:</i> Твой текущий диалог с ботм слишком длинный, твоё <b>первое сообщение</b> удалено.\n Отправь команду /new чтобы начать новый диалог"
-            else:
-                text = f"✍️ <i>Пометка:</i> Твой текущий диалог с ботм слишком длинный, <b>{n_first_dialog_messages_removed} первое сообщение</b> было удалено из чата.\n Отправь команду /new чтобы начать новый диалог"
-            await update.message.reply_text(text, parse_mode=ParseMode.HTML)
-
-        # split answer into multiple messages due to 4096 character limit
-        for answer_chunk in split_text_into_chunks(answer, 4000):
             try:
-                parse_mode = {
-                    "html": ParseMode.HTML,
-                    "markdown": ParseMode.MARKDOWN
-                }[openai_utils.CHAT_MODES[chat_mode]["parse_mode"]]
+                message = message or update.message.text
 
-                await update.message.reply_text(answer_chunk, parse_mode=parse_mode)
-            except telegram.error.BadRequest:
-                # answer has invalid characters, so we send it without parse_mode
-                await update.message.reply_text(answer_chunk)
+                dialog_messages = db.get_dialog_messages(user_id, dialog_id=None)
+                chat_mode = db.get_user_attribute(user_id, "current_chat_mode")
+
+                chatgpt_instance = openai_utils.ChatGPT(use_chatgpt_api=config.use_chatgpt_api)
+                answer, n_used_tokens, n_first_dialog_messages_removed = await chatgpt_instance.send_message(
+                    message,
+                    dialog_messages=dialog_messages,
+                    chat_mode=chat_mode
+                )
+
+                # update user data
+                new_dialog_message = {"user": message, "bot": answer, "date": datetime.now()}
+                db.set_dialog_messages(
+                    user_id,
+                    db.get_dialog_messages(user_id, dialog_id=None) + [new_dialog_message],
+                    dialog_id=None
+                )
+
+                db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + db.get_user_attribute(user_id, "n_used_tokens"))
+
+            except Exception as e:
+                error_text = f"Произошла ошибка. Причина: {e}"
+                logger.error(error_text)
+                await update.message.reply_text(error_text)
+                return
+
+            # send message if some messages were removed from the context
+            if n_first_dialog_messages_removed > 0:
+                if n_first_dialog_messages_removed == 1:
+                    text = "✍️ <i>Пометка:</i> Твой текущий диалог с ботм слишком длинный, твоё <b>первое сообщение</b> удалено.\n Отправь команду /new чтобы начать новый диалог"
+                else:
+                    text = f"✍️ <i>Пометка:</i> Твой текущий диалог с ботм слишком длинный, <b>{n_first_dialog_messages_removed} первое сообщение</b> было удалено из чата.\n Отправь команду /new чтобы начать новый диалог"
+                await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+            # split answer into multiple messages due to 4096 character limit
+            for answer_chunk in split_text_into_chunks(answer, 4000):
+                try:
+                    parse_mode = {
+                        "html": ParseMode.HTML,
+                        "markdown": ParseMode.MARKDOWN
+                    }[openai_utils.CHAT_MODES[chat_mode]["parse_mode"]]
+
+                    await update.message.reply_text(answer_chunk, parse_mode=parse_mode)
+                except telegram.error.BadRequest:
+                    # answer has invalid characters, so we send it without parse_mode
+                    await update.message.reply_text(answer_chunk)
+        else:
+            keyboard = []
+            keyboard.append([InlineKeyboardButton('Купить подписку❤', callback_data=f"buy_subscribe")])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text('🔴У тебя не осталось токенов :(\n Ты можешь купить подписку за 249 рублей, либо дождаться следующего дня.', reply_markup=reply_markup)
+
     else:
         keyboard = []
-        keyboard.append([InlineKeyboardButton('Купить подписку❤', callback_data=f"buy_subscribe")])
+        keyboard.append([InlineKeyboardButton('Подписаться❤', url='https://t.me/AllNewsAI')])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text('🔴У тебя не осталось токенов :(\n Ты можешь купить подписку за 249 рублей, либо дождаться следующего дня.', reply_markup=reply_markup)
+        await context.bot.send_message(user_id, 'Вы не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
 
 async def voice_message_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
