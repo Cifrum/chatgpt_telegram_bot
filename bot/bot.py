@@ -380,7 +380,7 @@ async def buy_tokens(update: Update, context: CallbackContext):
             quickpay_form="shop",
             targets="Подписка GPT-Bot",
             paymentType="SB",
-            sum=2,
+            sum=249,
             label=label
         )
         text = f"Стоимость подписки 249 рублей. Нажми на кнопочку, чтобы приобрести её. Ссылка на оплату действует 10 минут."
