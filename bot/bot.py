@@ -316,7 +316,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
         keyboard = []
         keyboard.append([InlineKeyboardButton('Купить подписку❤', callback_data=f"buy_subscribe")])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        text = f"Ты потратил {n_used_tokens}\nТы можешь использовать ещё {5000 - int(n_used_tokens)}\nЛибо купить месячную подписку за 249 рублей для безлимитного доступа к боту."
+        text = f"Ты потратил {n_used_tokens} токенов\nТы можешь использовать ещё {5000 - int(n_used_tokens)} токенов\nЛибо купить месячную подписку за 249 рублей для безлимитного доступа к боту."
     if reply_markup:
         await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
     else:
@@ -365,7 +365,7 @@ async def buy_tokens(update: Update, context: CallbackContext):
     subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
     if (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
         subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
-        text = f"Поздравляю, у тебя активирована подписка!\nОна действует до {subscribe_date}"
+        text = f"Поздравляю, у тебя активирована подписка!\nОна действует до {subscribe_date.strftime("%d-%m-/%Y, %H:%M:%S")}"
         await query.edit_message_text(text, parse_mode=ParseMode.HTML)
 
     else:
