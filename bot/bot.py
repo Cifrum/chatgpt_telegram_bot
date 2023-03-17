@@ -365,7 +365,7 @@ async def buy_tokens(update: Update, context: CallbackContext):
     subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
     if (is_subscribe and datetime.timestamp(datetime.now()) - datetime.timestamp(subscribe_date) < 0):
         subscribe_date = db.get_user_attribute(user_id, "subscribe_date")
-        text = f"Поздравляю, у тебя активирована подписка!\nОна действует до {subscribe_date.strftime("%d-%m-/%Y, %H:%M:%S")}"
+        text = f"Поздравляю, у тебя активирована подписка!\nОна действует до {subscribe_date.strftime('%d-%m-%Y, %H:%M:%S')}"
         await query.edit_message_text(text, parse_mode=ParseMode.HTML)
 
     else:
