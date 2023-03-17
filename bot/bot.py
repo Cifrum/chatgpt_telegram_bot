@@ -442,9 +442,9 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
     application.add_handler(MessageHandler(filters.Regex("Начать новый диалог") & user_filter, new_dialog_handle))
-    application.add_handler(MessageHandler(filters.Regex("Режим бота")          & user_filter, show_chat_modes_handle, filters=user_filter))
-    application.add_handler(MessageHandler(filters.Regex("Помощь")              & user_filter, help_handle, filters=user_filter))
-    application.add_handler(MessageHandler(filters.Regex("Баланс")                             & user_filter, show_balance_handle, filters=user_filter))
+    application.add_handler(MessageHandler(filters.Regex("Режим бота")          & user_filter, show_chat_modes_handle))
+    application.add_handler(MessageHandler(filters.Regex("Помощь")              & user_filter, help_handle))
+    application.add_handler(MessageHandler(filters.Regex("Баланс")              & user_filter, show_balance_handle))
     application.add_handler(CommandHandler("retry", retry_handle, filters=user_filter))
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
