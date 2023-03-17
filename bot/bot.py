@@ -74,7 +74,7 @@ async def start_handle(update: Update, context: CallbackContext):
     keyboard.append([KeyboardButton('Режим бота')])
     keyboard.append([KeyboardButton('Баланс')])
     keyboard.append([KeyboardButton('Помощь')])
-    reply_markup = ReplyKeyboardMarkup(keyboard)
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     
     reply_text += "\nСпрашивай меня о чём угодно!"
     
