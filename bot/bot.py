@@ -385,7 +385,7 @@ async def buy_tokens(update: Update, context: CallbackContext):
         )
         text = f"Стоимость подписки 249 рублей. Нажми на кнопочку, чтобы приобрести её. Ссылка на оплату действует 10 минут."
         keyboard = []
-        keyboard.append([InlineKeyboardButton('Купить подписку❤', url=quickpay.base_url)])
+        keyboard.append([InlineKeyboardButton('Оплатить', url=quickpay.base_url)])
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         status = None
