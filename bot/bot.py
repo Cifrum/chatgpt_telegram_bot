@@ -423,7 +423,9 @@ async def check_subscribe(update: Update, context: CallbackContext):
         keyboard.append([InlineKeyboardButton('Подписаться❤', url='https://t.me/+jrgWB4pkbhFkY2Ni')])
         keyboard.append([InlineKeyboardButton('Проверить', callback_data='check')])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text('Вы всё ещё не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
+        await context.bot.send_message(user_id, 'Вы всё ещё не подписаны на наш канал. Чтобы начать работу с ботом, подпишись!', reply_markup=reply_markup)   
+
+        await query.delete_message()   
 
 
 def run_bot() -> None:
